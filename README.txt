@@ -1,4 +1,6 @@
 Toàn bộ mã nguồn để demo được lưu trong notebook Main_Source.ipynb
+load/save model trong Jupyter notebook hoặc tải từ driver sau:
+model transformers: https://drive.google.com/file/d/17QtrmUyzs7EFW_Us_c54maSm1bQ6aR1F/view?usp=sharing
 
 Giải nén 2 model đã được huấn luyện để thực nghiệm
 
