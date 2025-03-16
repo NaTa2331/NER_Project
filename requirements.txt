@@ -1,2 +1,8 @@
-pytorch
+streamlit
+groq
+gtts
+numpy
+SpeechRecognition
 spacy
+torch
+Pyvi
