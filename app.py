@@ -9,6 +9,19 @@ nlp_spacy = spacy.load(spacy_model_path)
 if "total_inputs" not in st.session_state:
     st.session_state.total_inputs = []
 
+# Dictionary chuyển đổi mã thực thể sang tên đầy đủ và mô tả
+ENTITY_DESCRIPTIONS = {
+    "B-ORG": "Tên tổ chức (Bắt đầu thực thể)",
+    "I-ORG": "Tên tổ chức (Tiếp tục thực thể)",
+    "B-LOC": "Địa điểm (Bắt đầu thực thể)",
+    "I-LOC": "Địa điểm (Tiếp tục thực thể)",
+    "B-PER": "Tên người (Bắt đầu thực thể)",
+    "I-PER": "Tên người (Tiếp tục thực thể)",
+    "B-MISC": "Thực thể khác (Bắt đầu thực thể)n",
+    "I-MISC": "Thực thể khác (Tiếp tục thực thể)",
+    "O": "Không thuộc thực thể nào",
+}
+
 def extract_information_spacy(sentence):
     doc = nlp_spacy(sentence)
     extracted_info = {}
@@ -23,7 +36,8 @@ def format_output(text, entities):
     if entities:
         for entity_type, tokens in entities.items():
             unique_tokens = list(set(tokens))  # Loại bỏ trùng lặp
-            output += f"- **{entity_type}**: {', '.join(unique_tokens)}\n"
+            description = ENTITY_DESCRIPTIONS.get(entity_type, "Thực thể khác")
+            output += f"- **{description}**: {', '.join(unique_tokens)}\n"
     else:
         output += "*Không tìm thấy thực thể nào trong văn bản.*"
     
