@@ -9,60 +9,47 @@ nlp_spacy = spacy.load(spacy_model_path)
 if "total_inputs" not in st.session_state:
     st.session_state.total_inputs = []
 
-# Dictionary chuyển đổi mã thực thể sang tên đầy đủ và mô tả
+# Dictionary chuyển đổi mã thực thể sang tên đầy đủ
 ENTITY_DESCRIPTIONS = {
     "ORG": "Tên tổ chức",
     "LOC": "Địa điểm",
     "PER": "Tên người",
-    "MISC": "Thực thể khác",
+    "MISC": "Thực thể khác"
 }
 
-def extract_entity_groups(sentence):
-    doc = nlp_spacy(sentence)
-    entity_groups = []
-    current_group = []
-    current_label = None
-    
-    for ent in doc.ents:
-        label = ent.label_
-        
-        if label.startswith("B-"):
-            if current_group:
-                entity_groups.append((current_label, " ".join(current_group)))
-            current_group = [ent.text]
-            current_label = label[2:]
-        elif label.startswith("I-") and current_group:
-            current_group.append(ent.text)
-        else:
-            if current_group:
-                entity_groups.append((current_label, " ".join(current_group)))
-                current_group = []
-                current_label = None
-    
-    if current_group:
-        entity_groups.append((current_label, " ".join(current_group)))
-    
-    return entity_groups
-
-def extract_information_spacy(sentence):
+def extract_entities(sentence):
     doc = nlp_spacy(sentence)
     extracted_info = {}
+    entity_chunks = []
+    
+    current_entity = ""
+    current_label = ""
+    
     for ent in doc.ents:
-        extracted_info.setdefault(ent.label_, []).append(ent.text)
-    return extracted_info
+        if ent.label_ not in ENTITY_DESCRIPTIONS:
+            continue
+        
+        if ent.label_ == current_label:
+            current_entity += " " + ent.text  # Nối từ cùng loại vào một cụm
+        else:
+            if current_entity:
+                entity_chunks.append((current_label, current_entity))
+            current_entity = ent.text
+            current_label = ent.label_
+    
+    if current_entity:
+        entity_chunks.append((current_label, current_entity))
+    
+    # Nhóm theo loại thực thể
+    for label, entity in entity_chunks:
+        extracted_info.setdefault(label, []).append(entity)
+    
+    return extracted_info, entity_chunks
 
-def format_output(text, entities, entity_groups):
+def format_output(text, entities, entity_chunks):
     output = f"### Văn bản gốc:\n{text}\n\n"
-    output += "### Danh sách cụm thực thể:\n"
+    output += "### Kết quả nhận diện thực thể:\n"
     
-    if entity_groups:
-        for label, group in entity_groups:
-            description = ENTITY_DESCRIPTIONS.get(label, "Thực thể khác")
-            output += f"- **{description}**: {group}\n"
-    else:
-        output += "*Không có cụm thực thể nào được nhận diện.*\n"
-    
-    output += "\n### Kết quả nhận diện thực thể:\n"
     if entities:
         for entity_type, tokens in entities.items():
             unique_tokens = list(set(tokens))  # Loại bỏ trùng lặp
@@ -70,6 +57,10 @@ def format_output(text, entities, entity_groups):
             output += f"- **{description}**: {', '.join(unique_tokens)}\n"
     else:
         output += "*Không tìm thấy thực thể nào trong văn bản.*"
+    
+    output += "\n### Danh sách cụm thực thể:\n"
+    for label, entity in entity_chunks:
+        output += f"- **{ENTITY_DESCRIPTIONS.get(label, 'Thực thể khác')}:** {entity}\n"
     
     return output
 
@@ -84,23 +75,20 @@ if st.button("Nhận diện thực thể"):
         st.session_state.total_inputs.append(user_input)
         
         # Xử lý mô hình spaCy
-        entity_groups = extract_entity_groups(user_input)
-        extracted_entities_spacy = extract_information_spacy(user_input)
-        formatted_text_spacy = format_output(user_input, extracted_entities_spacy, entity_groups)
+        extracted_entities_spacy, entity_chunks = extract_entities(user_input)
+        formatted_text_spacy = format_output(user_input, extracted_entities_spacy, entity_chunks)
 
         # Hiển thị kết quả
         st.subheader("📌 Kết quả từ mô hình AI:")
         st.markdown(formatted_text_spacy)
         
-        # Lưu cả văn bản nhập và kết quả nhận dạng vào tệp
+        # Lưu kết quả để tải xuống
         all_inputs_with_entities = []
         for text in st.session_state.total_inputs:
-            entity_groups = extract_entity_groups(text)
-            extracted_entities_spacy = extract_information_spacy(text)
-            formatted_text_spacy = format_output(text, extracted_entities_spacy, entity_groups)
+            extracted_entities_spacy, entity_chunks = extract_entities(text)
+            formatted_text_spacy = format_output(text, extracted_entities_spacy, entity_chunks)
             all_inputs_with_entities.append(formatted_text_spacy)
         
-        # Tạo tệp để tải xuống
         all_inputs_with_entities_text = "\n\n".join(all_inputs_with_entities)
         
         st.download_button(
