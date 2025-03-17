@@ -25,51 +25,19 @@ ENTITY_DESCRIPTIONS = {
 def extract_information_spacy(sentence):
     doc = nlp_spacy(sentence)
     extracted_info = {}
-    current_entity = None
-
     for ent in doc.ents:
-        if ent.label_ in ["B-ORG", "I-ORG"]:
-            if ent.label_ == "B-ORG":
-                if current_entity:
-                    extracted_info.setdefault(current_entity[0], []).append(" ".join(current_entity[1]))
-                current_entity = [ent.label_, [ent.text]]  # Start a new entity
-            else:
-                if current_entity and current_entity[0] == "B-ORG":
-                    current_entity[1].append(ent.text)  # Continue the entity
-        else:
-            if current_entity:
-                extracted_info.setdefault(current_entity[0], []).append(" ".join(current_entity[1]))
-                current_entity = None
-
-    if current_entity:
-        extracted_info.setdefault(current_entity[0], []).append(" ".join(current_entity[1]))
-
-    for ent in doc.ents:
-        if ent.label_ not in ["B-ORG", "I-ORG"]:
-            extracted_info.setdefault(ent.label_, []).append(ent.text)
-
+        extracted_info.setdefault(ent.label_, []).append(ent.text)
     return extracted_info
 
 def format_output(text, entities):
     output = f"### Văn bản gốc:\n{text}\n\n"
     output += "### Kết quả nhận diện thực thể:\n"
     
-    total_entities = sum(len(tokens) for tokens in entities.values())
-    output += f"**Tổng số thực thể nhận diện được: {total_entities}**\n\n"
-
     if entities:
-        output += "| Loại thực thể | Giá trị |\n"
-        output += "|---------------|---------|\n"
         for entity_type, tokens in entities.items():
             unique_tokens = list(set(tokens))  # Loại bỏ trùng lặp
             description = ENTITY_DESCRIPTIONS.get(entity_type, "Thực thể khác")
-            output += f"| **{description}** | {', '.join(unique_tokens)} |\n"
-        
-        # Add a section for complete phrases
-        output += "\n### Các cụm từ hoàn chỉnh:\n"
-        if "B-ORG" in entities:
-            complete_phrases = entities["B-ORG"] + entities.get("I-ORG", [])
-            output += f"- **Cụm từ tổ chức**: {', '.join(set(complete_phrases))}\n"
+            output += f"- **{description}**: {', '.join(unique_tokens)}\n"
     else:
         output += "*Không tìm thấy thực thể nào trong văn bản.*"
     
