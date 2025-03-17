@@ -11,24 +11,41 @@ if "total_inputs" not in st.session_state:
 
 # Dictionary chuyển đổi mã thực thể sang tên đầy đủ và mô tả
 ENTITY_DESCRIPTIONS = {
-    "B-ORG": "Tên tổ chức (Bắt đầu thực thể)",
-    "I-ORG": "Tên tổ chức (Tiếp tục thực thể)",
-    "B-LOC": "Địa điểm (Bắt đầu thực thể)",
-    "I-LOC": "Địa điểm (Tiếp tục thực thể)",
-    "B-PER": "Tên người (Bắt đầu thực thể)",
-    "I-PER": "Tên người (Tiếp tục thực thể)",
-    "B-MISC": "Thực thể khác (Bắt đầu thực thể)n",
-    "I-MISC": "Thực thể khác (Tiếp tục thực thể)",
-    "O": "Không thuộc thực thể nào",
+    "ORG": "Tên tổ chức",
+    "LOC": "Địa điểm",
+    "PER": "Tên người",
+    "MISC": "Thực thể khác"
 }
+
+# Hàm nhận diện thực thể và nhóm các cụm thực thể
 
 def extract_information_spacy(sentence):
     doc = nlp_spacy(sentence)
     extracted_info = {}
-    for ent in doc.ents:
-        extracted_info.setdefault(ent.label_, []).append(ent.text)
+    current_entity = ""
+    current_label = None
+    
+    for token in doc:
+        if token.ent_iob_ == "B":  # Nếu là bắt đầu một thực thể mới
+            if current_entity:
+                extracted_info.setdefault(current_label, []).append(current_entity)
+            current_entity = token.text
+            current_label = token.ent_type_
+        elif token.ent_iob_ == "I" and current_label == token.ent_type_:  # Nếu là tiếp tục của thực thể trước đó
+            current_entity += " " + token.text
+        else:
+            if current_entity:
+                extracted_info.setdefault(current_label, []).append(current_entity)
+                current_entity = ""
+                current_label = None
+    
+    # Lưu thực thể cuối cùng nếu có
+    if current_entity:
+        extracted_info.setdefault(current_label, []).append(current_entity)
+    
     return extracted_info
 
+# Hàm hiển thị kết quả nhận diện thực thể
 def format_output(text, entities):
     output = f"### Văn bản gốc:\n{text}\n\n"
     output += "### Kết quả nhận diện thực thể:\n"
