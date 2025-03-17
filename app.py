@@ -64,6 +64,12 @@ def format_output(text, entities):
             unique_tokens = list(set(tokens))  # Loại bỏ trùng lặp
             description = ENTITY_DESCRIPTIONS.get(entity_type, "Thực thể khác")
             output += f"| **{description}** | {', '.join(unique_tokens)} |\n"
+        
+        # Add a section for complete phrases
+        output += "\n### Các cụm từ hoàn chỉnh:\n"
+        if "B-ORG" in entities:
+            complete_phrases = entities["B-ORG"] + entities.get("I-ORG", [])
+            output += f"- **Cụm từ tổ chức**: {', '.join(set(complete_phrases))}\n"
     else:
         output += "*Không tìm thấy thực thể nào trong văn bản.*"
     
