@@ -17,15 +17,23 @@ def extract_information_spacy(sentence):
     return extracted_info
 
 def format_output(text, entities):
-    output = f"Văn bản gốc: {text}\n\n"
-    for entity_type, tokens in entities.items():
-        unique_tokens = list(set(tokens))  # Loại bỏ trùng lặp
-        output += f"{entity_type}: {', '.join(unique_tokens)}\n"
+    output = f"### Văn bản gốc:\n{text}\n\n"
+    output += "### Kết quả nhận diện thực thể:\n"
+    
+    if entities:
+        for entity_type, tokens in entities.items():
+            unique_tokens = list(set(tokens))  # Loại bỏ trùng lặp
+            output += f"- **{entity_type}**: {', '.join(unique_tokens)}\n"
+    else:
+        output += "*Không tìm thấy thực thể nào trong văn bản.*"
+    
     return output
 
 # Streamlit UI
-st.title("Named Entity Recognition (NER) App")
-user_input = st.text_area("Nhập văn bản:", "")
+st.title("🔎 Ứng dụng Nhận diện Thực thể (NER)")
+st.write("Ứng dụng giúp trích xuất thông tin quan trọng từ văn bản bằng mô hình AI.")
+
+user_input = st.text_area("Nhập văn bản cần phân tích:", "")
 
 if st.button("Nhận diện thực thể"):
     if user_input:
@@ -36,8 +44,8 @@ if st.button("Nhận diện thực thể"):
         formatted_text_spacy = format_output(user_input, extracted_entities_spacy)
 
         # Hiển thị kết quả
-        st.subheader("Kết quả từ mô hình spaCy:")
-        st.text_area("spaCy Output:", formatted_text_spacy, height=200)
+        st.subheader("📌 Kết quả từ mô hình AI:")
+        st.markdown(formatted_text_spacy)
         
         # Lưu cả văn bản nhập và kết quả nhận dạng vào tệp
         all_inputs_with_entities = []
@@ -50,10 +58,10 @@ if st.button("Nhận diện thực thể"):
         all_inputs_with_entities_text = "\n\n".join(all_inputs_with_entities)
         
         st.download_button(
-            label="Tải xuống tất cả văn bản và kết quả nhận dạng",
+            label="📥 Tải xuống kết quả nhận diện",
             data=all_inputs_with_entities_text,
-            file_name="all_inputs_with_entities.txt",
+            file_name="ket_qua_ner.txt",
             mime="text/plain"
         )
     else:
-        st.warning("Vui lòng nhập văn bản.")
+        st.warning("⚠️ Vui lòng nhập văn bản trước khi phân tích.")
