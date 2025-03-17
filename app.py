@@ -9,45 +9,35 @@ nlp_spacy = spacy.load(spacy_model_path)
 if "total_inputs" not in st.session_state:
     st.session_state.total_inputs = []
 
-# Chuyển đổi nhãn thực thể thành tên dễ hiểu
-ENTITY_LABELS = {
-    "LOC": "Địa điểm",
-    "ORG": "Tên tổ chức",
-    "PER": "Tên người",
-    "MISC": "Thực thể khác",
+# Dictionary chuyển đổi mã thực thể sang tên đầy đủ và mô tả
+ENTITY_DESCRIPTIONS = {
+    "B-ORG": "Tên tổ chức (Bắt đầu thực thể)",
+    "I-ORG": "Tên tổ chức (Tiếp tục thực thể)",
+    "B-LOC": "Địa điểm (Bắt đầu thực thể)",
+    "I-LOC": "Địa điểm (Tiếp tục thực thể)",
+    "B-PER": "Tên người (Bắt đầu thực thể)",
+    "I-PER": "Tên người (Tiếp tục thực thể)",
+    "B-MISC": "Thực thể khác (Bắt đầu thực thể)n",
+    "I-MISC": "Thực thể khác (Tiếp tục thực thể)",
+    "O": "Không thuộc thực thể nào",
 }
 
-def extract_entities(sentence):
+def extract_information_spacy(sentence):
     doc = nlp_spacy(sentence)
-    entities = {}
-    current_entity = ""
-    current_label = ""
-
+    extracted_info = {}
     for ent in doc.ents:
-        label = ENTITY_LABELS.get(ent.label_, "Thực thể khác")
-        
-        if label == current_label:
-            current_entity += " " + ent.text  # Ghép thực thể tiếp theo cùng loại
-        else:
-            if current_entity:  # Nếu có thực thể trước đó, thêm vào danh sách
-                entities.setdefault(current_label, []).append(current_entity)
-            current_entity = ent.text
-            current_label = label
-
-    # Thêm thực thể cuối cùng vào danh sách
-    if current_entity:
-        entities.setdefault(current_label, []).append(current_entity)
-
-    return entities
+        extracted_info.setdefault(ent.label_, []).append(ent.text)
+    return extracted_info
 
 def format_output(text, entities):
     output = f"### Văn bản gốc:\n{text}\n\n"
     output += "### Kết quả nhận diện thực thể:\n"
-
+    
     if entities:
-        for category, values in entities.items():
-            unique_values = list(set(values))  # Loại bỏ trùng lặp
-            output += f"- **{category}**: {', '.join(f'[{value}]' for value in unique_values)}\n"
+        for entity_type, tokens in entities.items():
+            unique_tokens = list(set(tokens))  # Loại bỏ trùng lặp
+            description = ENTITY_DESCRIPTIONS.get(entity_type, "Thực thể khác")
+            output += f"- **{description}**: {', '.join(unique_tokens)}\n"
     else:
         output += "*Không tìm thấy thực thể nào trong văn bản.*"
     
@@ -63,27 +53,27 @@ if st.button("Nhận diện thực thể"):
     if user_input:
         st.session_state.total_inputs.append(user_input)
         
-        # Xử lý với spaCy
-        extracted_entities = extract_entities(user_input)
-        formatted_text = format_output(user_input, extracted_entities)
+        # Xử lý mô hình spaCy
+        extracted_entities_spacy = extract_information_spacy(user_input)
+        formatted_text_spacy = format_output(user_input, extracted_entities_spacy)
 
         # Hiển thị kết quả
         st.subheader("📌 Kết quả từ mô hình AI:")
-        st.markdown(formatted_text)
+        st.markdown(formatted_text_spacy)
         
-        # Lưu toàn bộ dữ liệu
+        # Lưu cả văn bản nhập và kết quả nhận dạng vào tệp
         all_inputs_with_entities = []
         for text in st.session_state.total_inputs:
-            extracted_entities = extract_entities(text)
-            formatted_text = format_output(text, extracted_entities)
-            all_inputs_with_entities.append(formatted_text)
+            extracted_entities_spacy = extract_information_spacy(text)
+            formatted_text_spacy = format_output(text, extracted_entities_spacy)
+            all_inputs_with_entities.append(formatted_text_spacy)
         
         # Tạo tệp để tải xuống
-        all_inputs_text = "\n\n".join(all_inputs_with_entities)
+        all_inputs_with_entities_text = "\n\n".join(all_inputs_with_entities)
         
         st.download_button(
             label="📥 Tải xuống kết quả nhận diện",
-            data=all_inputs_text,
+            data=all_inputs_with_entities_text,
             file_name="ket_qua_ner.txt",
             mime="text/plain"
         )
