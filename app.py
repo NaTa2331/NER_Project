@@ -25,8 +25,29 @@ ENTITY_DESCRIPTIONS = {
 def extract_information_spacy(sentence):
     doc = nlp_spacy(sentence)
     extracted_info = {}
+    current_entity = None
+
     for ent in doc.ents:
-        extracted_info.setdefault(ent.label_, []).append(ent.text)
+        if ent.label_ in ["B-ORG", "I-ORG"]:
+            if ent.label_ == "B-ORG":
+                if current_entity:
+                    extracted_info.setdefault(current_entity[0], []).append(" ".join(current_entity[1]))
+                current_entity = [ent.label_, [ent.text]]  # Start a new entity
+            else:
+                if current_entity and current_entity[0] == "B-ORG":
+                    current_entity[1].append(ent.text)  # Continue the entity
+        else:
+            if current_entity:
+                extracted_info.setdefault(current_entity[0], []).append(" ".join(current_entity[1]))
+                current_entity = None
+
+    if current_entity:
+        extracted_info.setdefault(current_entity[0], []).append(" ".join(current_entity[1]))
+
+    for ent in doc.ents:
+        if ent.label_ not in ["B-ORG", "I-ORG"]:
+            extracted_info.setdefault(ent.label_, []).append(ent.text)
+
     return extracted_info
 
 def format_output(text, entities):
