@@ -25,27 +25,8 @@ ENTITY_DESCRIPTIONS = {
 def extract_information_spacy(sentence):
     doc = nlp_spacy(sentence)
     extracted_info = {}
-    current_entity = None
-
     for ent in doc.ents:
-        if ent.label_.startswith("B-"):
-            if current_entity:
-                extracted_info.setdefault(current_entity[0], []).append(" ".join(current_entity[1]))
-            current_entity = [ent.label_, [ent.text]]  # Start a new entity
-        elif ent.label_.startswith("I-") and current_entity and current_entity[0] == ent.label_[2:]:
-            current_entity[1].append(ent.text)  # Continue the entity
-        else:
-            if current_entity:
-                extracted_info.setdefault(current_entity[0], []).append(" ".join(current_entity[1]))
-                current_entity = None
-
-    if current_entity:
-        extracted_info.setdefault(current_entity[0], []).append(" ".join(current_entity[1]))
-
-    for ent in doc.ents:
-        if not ent.label_.startswith("B-") and not ent.label_.startswith("I-"):
-            extracted_info.setdefault(ent.label_, []).append(ent.text)
-
+        extracted_info.setdefault(ent.label_, []).append(ent.text)
     return extracted_info
 
 def format_output(text, entities):
@@ -62,13 +43,6 @@ def format_output(text, entities):
             unique_tokens = list(set(tokens))  # Loại bỏ trùng lặp
             description = ENTITY_DESCRIPTIONS.get(entity_type, "Thực thể khác")
             output += f"| **{description}** | {', '.join(unique_tokens)} |\n"
-        
-        # Add a section for complete phrases for all entity types
-        output += "\n### Các cụm từ hoàn chỉnh:\n"
-        for entity_type in entities.keys():
-            if entity_type.startswith("B-"):
-                complete_phrases = entities[entity_type] + entities.get("I-" + entity_type[2:], [])
-                output += f"- **Cụm từ {ENTITY_DESCRIPTIONS.get(entity_type, 'khác')}**: {', '.join(set(complete_phrases))}\n"
     else:
         output += "*Không tìm thấy thực thể nào trong văn bản.*"
     
