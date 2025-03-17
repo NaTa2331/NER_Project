@@ -33,11 +33,16 @@ def format_output(text, entities):
     output = f"### Văn bản gốc:\n{text}\n\n"
     output += "### Kết quả nhận diện thực thể:\n"
     
+    total_entities = sum(len(tokens) for tokens in entities.values())
+    output += f"**Tổng số thực thể nhận diện được: {total_entities}**\n\n"
+
     if entities:
+        output += "| Loại thực thể | Giá trị |\n"
+        output += "|---------------|---------|\n"
         for entity_type, tokens in entities.items():
             unique_tokens = list(set(tokens))  # Loại bỏ trùng lặp
             description = ENTITY_DESCRIPTIONS.get(entity_type, "Thực thể khác")
-            output += f"- **{description}**: {', '.join(unique_tokens)}\n"
+            output += f"| **{description}** | {', '.join(unique_tokens)} |\n"
     else:
         output += "*Không tìm thấy thực thể nào trong văn bản.*"
     
