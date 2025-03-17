@@ -11,48 +11,33 @@ if "total_inputs" not in st.session_state:
 
 # Dictionary chuyển đổi mã thực thể sang tên đầy đủ và mô tả
 ENTITY_DESCRIPTIONS = {
-    "LOC": "Địa điểm",
-    "ORG": "Tên tổ chức",
-    "PER": "Tên người",
-    "MISC": "Thực thể khác"
+    "B-ORG": "Tên tổ chức (Bắt đầu thực thể)",
+    "I-ORG": "Tên tổ chức (Tiếp tục thực thể)",
+    "B-LOC": "Địa điểm (Bắt đầu thực thể)",
+    "I-LOC": "Địa điểm (Tiếp tục thực thể)",
+    "B-PER": "Tên người (Bắt đầu thực thể)",
+    "I-PER": "Tên người (Tiếp tục thực thể)",
+    "B-MISC": "Thực thể khác (Bắt đầu thực thể)n",
+    "I-MISC": "Thực thể khác (Tiếp tục thực thể)",
+    "O": "Không thuộc thực thể nào",
 }
 
 def extract_information_spacy(sentence):
     doc = nlp_spacy(sentence)
-    extracted_info = {"LOC": [], "ORG": [], "PER": [], "MISC": []}
-    
-    prev_label = None
-    entity_text = ""
-    
+    extracted_info = {}
     for ent in doc.ents:
-        if ent.label_ in extracted_info:
-            if prev_label == ent.label_:  # Tiếp tục cùng một thực thể
-                entity_text += " " + ent.text
-            else:  # Bắt đầu thực thể mới
-                if entity_text:
-                    extracted_info[prev_label].append(entity_text.strip())
-                entity_text = ent.text
-                prev_label = ent.label_
-    
-    # Thêm thực thể cuối cùng nếu có
-    if entity_text and prev_label:
-        extracted_info[prev_label].append(entity_text.strip())
-    
-    # Loại bỏ trùng lặp
-    for key in extracted_info:
-        extracted_info[key] = list(set(extracted_info[key]))
-    
+        extracted_info.setdefault(ent.label_, []).append(ent.text)
     return extracted_info
 
 def format_output(text, entities):
     output = f"### Văn bản gốc:\n{text}\n\n"
     output += "### Kết quả nhận diện thực thể:\n"
     
-    if any(entities.values()):
+    if entities:
         for entity_type, tokens in entities.items():
-            if tokens:
-                description = ENTITY_DESCRIPTIONS.get(entity_type, "Thực thể khác")
-                output += f"- **{description}**: {', '.join(tokens)}\n"
+            unique_tokens = list(set(tokens))  # Loại bỏ trùng lặp
+            description = ENTITY_DESCRIPTIONS.get(entity_type, "Thực thể khác")
+            output += f"- **{description}**: {', '.join(unique_tokens)}\n"
     else:
         output += "*Không tìm thấy thực thể nào trong văn bản.*"
     
